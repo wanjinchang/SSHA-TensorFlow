@@ -177,7 +177,7 @@ Download trained models from [Models](#models), then uzip to the folder ``output
   ```Shell
   # at repository root
   GPU_ID=0
-  CUDA_VISIBLE_DEVICES=${GPU_ID} ./tools/demo.py.
+  CUDA_VISIBLE_DEVICES=${GPU_ID} ./tools/demo_bbox_kpoints.py.
   ```
 or run ``python tools/demo_bbox_kpoints.py`` directly.
 
