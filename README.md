@@ -45,12 +45,12 @@ VGG16-SSH:
 
 -  Clone the repository
   ```Shell
-  git clone https://github.com/wanjinchang/SSH-TensorFlow.git
+  git clone https://github.com/wanjinchang/SSHA-TensorFlow.git
   ```
 
 -  Update your -arch in setup script to match your GPU
   ```Shell
-  cd SSH-TensorFlow/lib
+  cd SSHA-TensorFlow/lib
   # Change the GPU architecture (-arch) if necessary
   vim setup.py
   ```
