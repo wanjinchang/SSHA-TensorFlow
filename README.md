@@ -27,6 +27,7 @@ demo_result(VGG16_SSHA result):
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/26.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/16.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/45.jpg"/></div>
+<div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/33.jpg"/></div>
 
 **Result on FDDB**
 
@@ -76,9 +77,9 @@ VGG16-SSH:
 
 Generate your own annotation file from WIDER FACE dataset(eliminate the invalid data that x <=0 or y <=0 or w <=0 or h <= 0).
     the annotation format looks like follow:
-    image_file_path
-    face_num
-    x_min y_min x_max y_max left_eye_x left_eye_y right_eye_x right_eye_y nose_x nose_y left_mouth_x left_mouth_y right_mouth_x right_mouth_y kpoints_flag
+    image_file_path  
+    face_num  
+    x_min y_min x_max y_max left_eye_x left_eye_y right_eye_x right_eye_y nose_x nose_y left_mouth_x left_mouth_y right_mouth_x right_mouth_y kpoints_flag  
     ...
     Here is an example:
 ```
@@ -183,7 +184,7 @@ or run ``python tools/demo_bbox_kpoints.py`` directly.
 
 ## Models
 
-* vgg16_ssha(contained random_training and group training models) [BaiduYun Driver](https://pan.baidu.com/s/1hdoQXEZ_NEucGOPiKxQXig,  password:45ii)
+* vgg16_ssha(group training models) [BaiduYun Driver](https://pan.baidu.com/s/1hdoQXEZ_NEucGOPiKxQXig, password:45ii)
 ### License
 MIT LICENSE
 
@@ -191,7 +192,8 @@ MIT LICENSE
 - [ ] Support multi-batch images training
 - [ ] Multi-GPUs training
 - [ ] Improve performance
-Note: Some problems are still under being fixing, and the performance of face detection and face key points localization should be improved...
+
+**Note**: Some problems are still under being fixing, and the performance of face detection and face key points localization should be improved...
 
 ### References
 1. SSH: Single Stage Headless Face Detector(https://arxiv.org/pdf/1708.03979.pdf). Mahyar Najibi, Pouya Samangouei, Rama Chellappa, Larry S. Davis.ICCV 2017.
