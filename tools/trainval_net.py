@@ -1,34 +1,28 @@
-#!/usr/bin/env python
-# encoding: utf-8
-'''
-@author: wanjinchang
-@license: (C) Copyright 2013-2017, Node Supply Chain Manager Corporation Limited.
-@contact: wanjinchang1991@gmail.com
-@software: PyCharm
-@file: trainval_net.py
-@time: 18-6-18 上午9:35
-@desc: Tensorflow SSH, based on code from Ross Girshick
-'''
+# --------------------------------------------------------
+# Tensorflow Faster R-CNN
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Zheqi He, Xinlei Chen, based on code from Ross Girshick
+# --------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import _init_paths
-from model.train_val import get_training_roidb, train_net
-from model.config import cfg, cfg_from_file, cfg_from_list, get_output_dir, get_output_tb_dir
-from datasets.factory import get_imdb
-import datasets
+import tools._init_paths
+from lib.model.train_val_kpoints import get_training_roidb, train_net
+from lib.model.config import cfg, cfg_from_file, cfg_from_list, get_output_dir, get_output_tb_dir
+from lib.datasets.factory import get_imdb
+from lib import datasets
 import argparse
 import pprint
 import numpy as np
 import sys
 
 import tensorflow as tf
-from nets.vgg16 import vgg16_ssh
-from nets.resnet_v1 import resnetv1_ssh
-from nets.mobilenet_v1 import mobilenetv1_ssh
-from nets.darknet53 import Darknet53_ssh
-from nets.mobilenet_v2.mobilenet_v2 import mobilenetv2_ssh
+from lib.nets.vgg16 import vgg16
+from lib.nets.resnet_v1 import resnetv1
+from lib.nets.mobilenet_v1 import mobilenetv1
+from lib.nets.darknet53 import Darknet53
+from lib.nets.mobilenet_v2.mobilenet_v2 import mobilenetv2
 
 
 def parse_args():
@@ -53,10 +47,10 @@ def parse_args():
                         default=70000, type=int)
     parser.add_argument('--tag', dest='tag',
                         help='tag of the model',
-                        default=None, type=str)
-    parser.add_argument('--backbone', dest='backbone',
-                        help='vgg16, res50, res101, res152, mobile, mobile_v2, darknet53',
-                        default='res50', type=str)
+                        default='default_group_20190111', type=str)
+    parser.add_argument('--net', dest='net',
+                        help='vgg16, res50, res101, res152, mobile, mobile_v2',
+                        default='mobile_v2', type=str)
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
@@ -99,6 +93,8 @@ if __name__ == '__main__':
 
     print('Called with args:')
     print(args)
+    # print("&&&&&&&:", args.cfg_file)     --> experiments/cfgs/vgg16.yml
+    # print(("******:", args.set_cfgs))    --> ['ANCHOR_SCALES', 'ANCHOR_RATIOS', 'TRAIN.STEPSIZE', '[50000]']
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
@@ -130,20 +126,20 @@ if __name__ == '__main__':
     cfg.TRAIN.USE_FLIPPED = orgflip
 
     # load network
-    if args.backbone == 'vgg16':
-        net = vgg16_ssh()
-    elif args.backbone == 'res50':
-        net = resnetv1_ssh(num_layers=50)
-    elif args.backbone == 'res101':
-        net = resnetv1_ssh(num_layers=101)
-    elif args.backbone == 'res152':
-        net = resnetv1_ssh(num_layers=152)
-    elif args.backbone == 'darknet53':
-        net = Darknet53_ssh('data/imagenet_weights/darknet53.conv.74.npz')
-    elif args.backbone == 'mobile':
-        net = mobilenetv1_ssh()
-    elif args.backbone == 'mobile_v2':
-        net = mobilenetv2_ssh()
+    if args.net == 'vgg16':
+        net = vgg16()
+    elif args.net == 'res50':
+        net = resnetv1(num_layers=50)
+    elif args.net == 'res101':
+        net = resnetv1(num_layers=101)
+    elif args.net == 'res152':
+        net = resnetv1(num_layers=152)
+    elif args.net == 'mobile':
+        net = mobilenetv1()
+    elif args.net == 'darknet53':
+        net = Darknet53('data/imagenet_weights/darknet53.conv.74.npz')
+    elif args.net == 'mobile_v2':
+        net = mobilenetv2()
     else:
         raise NotImplementedError
 
