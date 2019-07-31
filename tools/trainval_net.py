@@ -1,5 +1,5 @@
 # --------------------------------------------------------
-# Tensorflow Faster R-CNN
+# Tensorflow SSHA
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Zheqi He, Xinlei Chen, based on code from Ross Girshick
 # --------------------------------------------------------
