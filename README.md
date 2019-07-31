@@ -25,7 +25,6 @@ demo_result(VGG16_SSHA result):
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/56.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/24.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/26.jpg"/></div>
-<div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/16.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/45.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/33.jpg"/></div>
 
@@ -76,7 +75,7 @@ VGG16-SSH:
 ## Setup_data
 
 Generate your own annotation file from WIDER FACE dataset(eliminate the invalid data that x <=0 or y <=0 or w <=0 or h <= 0).
-    the annotation format looks like follow:
+    the annotation format looks like follow:  
     image_file_path  
     face_num  
     x_min y_min x_max y_max left_eye_x left_eye_y right_eye_x right_eye_y nose_x nose_y left_mouth_x left_mouth_y right_mouth_x right_mouth_y kpoints_flag  
