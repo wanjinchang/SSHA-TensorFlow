@@ -24,7 +24,6 @@ This code is modified from [tf-faster-rcnn](https://github.com/endernewton/tf-fa
 demo_result(VGG16_SSHA result):
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/56.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/24.jpg"/></div>
-<div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/26.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/45.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/33.jpg"/></div>
 
