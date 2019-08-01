@@ -78,7 +78,7 @@ Generate your own annotation file from WIDER FACE dataset(eliminate the invalid 
     image_file_path  
     face_num  
     x_min y_min x_max y_max left_eye_x left_eye_y right_eye_x right_eye_y nose_x nose_y left_mouth_x left_mouth_y right_mouth_x right_mouth_y kpoints_flag  
-    ...
+    ...  
     Here is an example:
 ```
 0--Parade/0_Parade_marchingband_1_849.jpg
