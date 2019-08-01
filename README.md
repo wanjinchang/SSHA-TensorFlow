@@ -98,7 +98,7 @@ Generate your own annotation file from WIDER FACE dataset(eliminate the invalid 
 ...
 ```
 
-Note: kpoints_flag: 1 means the face has kpoints annotations, 0 has no kpoints annotations and the kpoints coordinates are all 0.
+**Note**: kpoints_flag: 1 means the face has kpoints annotations, 0 has no kpoints annotations and the kpoints coordinates are all 0.
 
 Or you can use my annotation files `wider_face_train_bbx_kp.txt` and `wider_face_val_bbx_kp.txt` under the folder ``data/`` directly.
 And you should have a directory structure as follows:  
