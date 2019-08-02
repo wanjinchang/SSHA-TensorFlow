@@ -24,7 +24,6 @@ This code is modified from [tf-faster-rcnn](https://github.com/endernewton/tf-fa
 demo_result(VGG16_SSHA result):
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/56.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/24.jpg"/></div>
-<div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/26.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/45.jpg"/></div>
 <div align=center><img src="https://github.com/wanjinchang/SSHA-TensorFlow/blob/master/data/vgg16_result/33.jpg"/></div>
 
@@ -79,7 +78,7 @@ Generate your own annotation file from WIDER FACE dataset(eliminate the invalid 
     image_file_path  
     face_num  
     x_min y_min x_max y_max left_eye_x left_eye_y right_eye_x right_eye_y nose_x nose_y left_mouth_x left_mouth_y right_mouth_x right_mouth_y kpoints_flag  
-    ...
+    ...  
     Here is an example:
 ```
 0--Parade/0_Parade_marchingband_1_849.jpg
@@ -99,7 +98,7 @@ Generate your own annotation file from WIDER FACE dataset(eliminate the invalid 
 ...
 ```
 
-Note: kpoints_flag: 1 means the face has kpoints annotations, 0 has no kpoints annotations and the kpoints coordinates are all 0.
+**Note**: kpoints_flag: 1 means the face has kpoints annotations, 0 has no kpoints annotations and the kpoints coordinates are all 0.
 
 Or you can use my annotation files `wider_face_train_bbx_kp.txt` and `wider_face_val_bbx_kp.txt` under the folder ``data/`` directly.
 And you should have a directory structure as follows:  
