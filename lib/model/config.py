@@ -10,10 +10,12 @@ from easydict import EasyDict as edict
 
 __C = edict()
 # Consumers can get config by:
-#   from ssh_config import cfg
+#   from fast_rcnn_config import cfg
 cfg = __C
 
-#***************** TRAIN Options***************************
+#
+# Training options
+#
 __C.TRAIN = edict()
 
 # Initial learning rate
@@ -29,12 +31,13 @@ __C.TRAIN.WEIGHT_DECAY = 0.0001
 __C.TRAIN.GAMMA = 0.1
 
 # Step size for reducing the learning rate, currently only support one step
-__C.TRAIN.STEPSIZE = [200000]
+__C.TRAIN.STEPSIZE = [30000]
 
 # Iteration intervals for showing the loss during training, on command line interface
 __C.TRAIN.DISPLAY = 10
 
 # Whether to double the learning rate for bias
+# __C.TRAIN.DOUBLE_BIAS = True
 __C.TRAIN.DOUBLE_BIAS = False
 
 # Whether to initialize the weights with truncated normal distribution 
@@ -48,6 +51,7 @@ __C.TRAIN.USE_GT = False
 
 # Whether to use aspect-ratio grouping of training images, introduced merely for saving
 # GPU memory
+# __C.TRAIN.ASPECT_GROUPING = False
 __C.TRAIN.ASPECT_GROUPING = True
 
 # The number of snapshots kept, older ones are deleted to save space
@@ -58,9 +62,11 @@ __C.TRAIN.SUMMARY_INTERVAL = 180
 
 # Scale to use during training (can list multiple scales)
 # The scale is the pixel size of an image's shortest side
+# __C.TRAIN.SCALES = (400,)
 __C.TRAIN.SCALES = (1200,)
 
 # Max pixel size of the longest side of a scaled input image
+# __C.TRAIN.MAX_SIZE = 800
 __C.TRAIN.MAX_SIZE = 1600
 
 # Images to use per minibatch
@@ -94,7 +100,8 @@ __C.TRAIN.BBOX_REG = True
 __C.TRAIN.BBOX_THRESH = 0.5
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 10000
+# __C.TRAIN.SNAPSHOT_ITERS = 5000
+__C.TRAIN.SNAPSHOT_ITERS = 200
 
 # solver.prototxt specifies the snapshot path prefix, this adds an optional
 # infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
@@ -118,10 +125,17 @@ __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 # Train using these proposals
 __C.TRAIN.PROPOSAL_METHOD = 'gt'
 
+# Make minibatches from images that have similar aspect ratios (i.e. both
+# tall and thin or both short and wide) in order to avoid wasting computation
+# on zero-padding.
+
 # Use RPN to detect objects
 __C.TRAIN.HAS_RPN = True
 
-# IOU >= thresh: positive example, SSH paper use 0.5
+# IOU >= thresh: positive example
+# __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
+
+# SSH paper use 0.5
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.5
 
 # IOU < thresh: negative example
@@ -140,9 +154,11 @@ __C.TRAIN.RPN_FG_FRACTION = 0.5
 __C.TRAIN.RPN_BATCHSIZE = 256
 
 # NMS threshold used on RPN proposals
+# __C.TRAIN.RPN_NMS_THRESH = 0.7
 __C.TRAIN.RPN_NMS_THRESH = 0.3
 
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
+# __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
 __C.TRAIN.RPN_PRE_NMS_TOP_N = 1000
 
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
@@ -150,6 +166,10 @@ __C.TRAIN.RPN_POST_NMS_TOP_N = 300
 
 # Deprecated (outside weights)
 __C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+
+# Deprecated (outside weights)
+__C.TRAIN.RPN_KPOINTS_POSITIVE_WEIGHTS = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+__C.TRAIN.RPN_KPOINTS_WEIGHTS_NON = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 # Give the positive RPN examples weight of p * 1 / {num positives}
 # and give negatives a weight of (1 - p)
@@ -164,11 +184,13 @@ __C.TRAIN.USE_ALL_GT = True
 __C.TRAIN.ANCHOR_MIN_SIZE = 4
 
 
-#***************** TEST Options***************************
+#
+# Testing options
+#
 __C.TEST = edict()
 
 # Scale to use during testing (can NOT list multiple scales)
-# The scale is the pixel size of an image's shortest side
+# The scale is the pixel size of an image's shortest sideTRAIN.BBOX_NORMALIZE_STDS
 __C.TEST.SCALES = (1200,)
 
 # Max pixel size of the longest side of a scaled input image
@@ -177,6 +199,10 @@ __C.TEST.MAX_SIZE = 1600
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 __C.TEST.NMS = 0.3
+
+# Experimental: treat the (K+1) units in the cls_score layer as linear
+# predictors (trained, eg, with one-vs-rest SVMs).
+__C.TEST.SVM = False
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
@@ -192,6 +218,7 @@ __C.TEST.PROPOSAL_METHOD = 'gt'
 __C.TEST.RPN_NMS_THRESH = 0.3
 
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
+# __C.TEST.RPN_PRE_NMS_TOP_N = 6000
 __C.TEST.RPN_PRE_NMS_TOP_N = 1000
 
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
@@ -203,19 +230,19 @@ __C.TEST.RPN_POST_NMS_TOP_N = 300
 # Testing mode, default to be 'nms', 'top' is slower but better
 # See report for details
 __C.TEST.MODE = 'nms'
+# __C.TEST.MODE = 'top'
+# __C.TEST.MODE = ' '
 
 # Only useful when TEST.MODE is 'top', specifies the number of top proposals to select
 __C.TEST.RPN_TOP_N = 5000
 
 # The minimum size of the anchors
-__C.TEST.ANCHOR_MIN_SIZE = 4
-
-
-#***************** Backbones Options***************************
+__C.TEST.ANCHOR_MIN_SIZE = 0
 
 #
 # ResNet options
 #
+
 __C.RESNET = edict()
 
 # Option to set if max-pooling is appended after crop_and_resize. 
@@ -228,10 +255,10 @@ __C.RESNET.MAX_POOL = False
 # Range: 0 (none) to 3 (all)
 __C.RESNET.FIXED_BLOCKS = 1
 
-
 #
 # MobileNet options
 #
+
 __C.MOBILENET = edict()
 
 # Whether to regularize the depth-wise filters during training
@@ -240,18 +267,19 @@ __C.MOBILENET.REGU_DEPTH = False
 # Number of fixed layers during training, by default the bottom 5 of 14 layers is fixed
 # Range: 0 (none) to 12 (all)
 # __C.MOBILENET.FIXED_LAYERS = 5
-__C.MOBILENET.FIXED_LAYERS = 3
+__C.MOBILENET.FIXED_LAYERS = 0
 
 # Weight decay for the mobilenet weights
 __C.MOBILENET.WEIGHT_DECAY = 0.00004
 
 # Depth multiplier
-__C.MOBILENET.DEPTH_MULTIPLIER = 1.
+__C.MOBILENET.DEPTH_MULTIPLIER = 1
 
 
 #
 # MobileNet_V2 options
 #
+
 __C.MOBILENET_V2 = edict()
 
 # Whether to regularize the depth-wise filters during training
@@ -259,7 +287,8 @@ __C.MOBILENET_V2.REGU_DEPTH = False
 
 # Number of fixed layers during training, by default the bottom 5 of 14 layers is fixed
 # Range: 0 (none) to 12 (all)
-# __C.MOBILENET_V2.FIXED_LAYERS = 0
+# __C.MOBILENET.FIXED_LAYERS = 5
+__C.MOBILENET_V2.FIXED_LAYERS = 0
 
 # Weight decay for the mobilenet weights
 __C.MOBILENET_V2.WEIGHT_DECAY = 0.00004
@@ -271,8 +300,17 @@ __C.MOBILENET_V2.DEPTH_MULTIPLIER = 1.
 __C.MOBILENET_V2.MIN_DEPTH = 16
 
 
+#
+# MISC
+#
 
-#***************** COMMON Options ***************************
+#
+# Darknet53 options
+#
+__C.DARKNET = edict()
+
+# Weight decay for the mobilenet weights
+__C.DARKNET.WEIGHT_DECAY = 0.00004
 
 # Pixel mean values (BGR order) as a (1, 1, 3) array
 # We use the same pixel mean for all networks even though it's not exactly what
@@ -300,16 +338,31 @@ __C.USE_GPU_NMS = True
 # Use an end-to-end tensorflow model.
 # Note: models in E2E tensorflow mode have only been tested in feed-forward mode,
 #       but these models are exportable to other tensorflow instances as GraphDef files.
+# __C.USE_E2E_TF = False
 __C.USE_E2E_TF = True
 
-# Original anchor scales for SSH(Single Stage Headless Face Detector)
-__C.ANCHOR_SCALES = {"M1": [1, 2], "M2": [4, 8], "M3": [16, 32]}
+# Default pooling mode, only 'crop' is available
+__C.POOLING_MODE = 'crop'
 
-# Add anchors_scales by myself, it seems that does not improve the performance
+# Size of the pooled region after RoI pooling
+__C.POOLING_SIZE = 7
+
+# Anchor scales for RPN
+# __C.ANCHOR_SCALES = [8, 16, 32]
+
+# Anchor scales for SSH(Single Stage Headless Face Detector)
+__C.ANCHOR_SCALES = {"M1": [1, 2], "M2": [4, 8], "M3": [16, 32]}
+# add anchors_scales
 # __C.ANCHOR_SCALES = {"M1": [0.5, 1.0, 1.5, 2.0], "M2": [0.5, 1.0, 1.5, 2.0, 4, 8], "M3": [0.5, 1.0, 1.5, 2.0, 16, 32]}
 
+# Anchor ratios for RPN
+# __C.ANCHOR_RATIOS = [0.5,1,2]
+
 # Anchor ratios for SSH(Single Stage Headless Face Detector)
-__C.ANCHOR_RATIOS = [1, ]
+__C.ANCHOR_RATIOS = [1., ]
+
+# Number of filters for the RPN layer
+__C.RPN_CHANNELS = 512
 
 
 def get_output_dir(imdb, weights_filename):
@@ -390,8 +443,11 @@ def cfg_from_list(cfg_list):
     """Set config keys via list (e.g., from command line)."""
     from ast import literal_eval
     assert len(cfg_list) % 2 == 0
+    print("^^^^^^^^^^^:", cfg_list[0::2], cfg_list[1::2])
     for k, v in zip(cfg_list[0::2], cfg_list[1::2]):
+        # print("%%%%%%%%%%:", k)
         key_list = k.split('.')
+        # print("&&&&&&&&&&&:", key_list)
         d = __C
         for subkey in key_list[:-1]:
             assert subkey in d
@@ -403,4 +459,7 @@ def cfg_from_list(cfg_list):
         except:
             # handle the case when v is a string literal
             value = v
+        # assert type(value) == type(d[subkey]), \
+        #   'type {} does not match original type {}'.format(
+        #     type(value), type(d[subkey]))
         d[subkey] = value
