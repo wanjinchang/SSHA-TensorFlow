@@ -125,17 +125,6 @@ class SolverWrapper(object):
                                                   anchor_scales=cfg.ANCHOR_SCALES,
                                                   anchor_ratios=cfg.ANCHOR_RATIOS)
             # Define the loss
-            # the paper train the three detection module branch independently, try to follow the paper
-            # print("%%%%%%:", layers['all_losses'])    {'total_loss': <tf.Tensor 'add_2:0' shape=() dtype=float32>,
-            # 'M1': {'rpn_cross_entropy': <tf.Tensor 'LOSS_M1_default/Mean:0' shape=() dtype=float32>,
-            # 'rpn_loss_box': <tf.Tensor 'LOSS_M1_default/Mean_1:0' shape=() dtype=float32>,
-            # 'total_loss': <tf.Tensor 'LOSS_M1_default/add_2:0' shape=() dtype=float32>},
-            # 'M2': {'rpn_cross_entropy': <tf.Tensor 'LOSS_M2_default/Mean:0' shape=() dtype=float32>,
-            # 'rpn_loss_box': <tf.Tensor 'LOSS_M2_default/Mean_1:0' shape=() dtype=float32>,
-            # 'total_loss': <tf.Tensor 'LOSS_M2_default/add_2:0' shape=() dtype=float32>},
-            # 'M3': {'rpn_cross_entropy': <tf.Tensor 'LOSS_M3_default/Mean:0' shape=() dtype=float32>,
-            # 'rpn_loss_box': <tf.Tensor 'LOSS_M3_default/Mean_1:0' shape=() dtype=float32>, 'total_loss':
-            # <tf.Tensor 'LOSS_M3_default/add_2:0' shape=() dtype=float32>}}
             losses = layers['all_losses']
             loss = losses['total_loss']
             m1_loss = losses['M1']['total_loss']
@@ -150,14 +139,9 @@ class SolverWrapper(object):
 
             # Compute the gradients with regard to the loss
             gvs = self.optimizer.compute_gradients(loss)
-            # print("gvs:" ,gvs)     (<tf.Tensor 'gradients/vgg_16_1/M3/conv1/BiasAdd_grad/tuple/control_dependency_1:0'
-            # shape=(256,) dtype=float32>, <tf.Variable 'vgg_16/M3/conv1/biases:0' shape=(256,) dtype=float32_ref>)
             gvs_m1 = self.optimizer_m1.compute_gradients(m1_loss)
             gvs_m2 = self.optimizer_m2.compute_gradients(m2_loss)
             gvs_m3 = self.optimizer_m3.compute_gradients(m3_loss)
-            # gvs_m1 = self.optimizer.compute_gradients(m1_loss)
-            # gvs_m2 = self.optimizer.compute_gradients(m2_loss)
-            # gvs_m3 = self.optimizer.compute_gradients(m3_loss)
             # Double the gradient of the bias if set
             if cfg.TRAIN.DOUBLE_BIAS:
                 final_gvs = []
@@ -203,9 +187,6 @@ class SolverWrapper(object):
                 train_m3_op = self.optimizer.apply_gradients(final_gvs_m3)
             else:
                 train_op = self.optimizer.apply_gradients(gvs)
-                # train_m1_op = self.optimizer.apply_gradients(gvs_m1)
-                # train_m2_op = self.optimizer.apply_gradients(gvs_m2)
-                # train_m3_op = self.optimizer.apply_gradients(gvs_m3)
                 train_m1_op = self.optimizer_m1.apply_gradients(gvs_m1)
                 train_m2_op = self.optimizer_m2.apply_gradients(gvs_m2)
                 train_m3_op = self.optimizer_m3.apply_gradients(gvs_m3)
@@ -261,14 +242,7 @@ class SolverWrapper(object):
             stepsizes = list(cfg.TRAIN.STEPSIZE)
         else:
             sess.run(tf.variables_initializer(variables, name='init'))
-            # print('>>>>>> pretrained_model:', self.pretrained_model)
             var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
-            # saver = tf.train.import_meta_graph(self.pretrained_model + '.meta')
-            # saver.restore(sess, self.pretrained_model)
-            # var_keep_dic = []
-            # for v in tf.trainable_variables():
-            #     var_keep_dic.append(v)
-            print("var_keep_dic", var_keep_dic)
             # Get the variables to restore, ignoring the variables to fix
             variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
             restorer = tf.train.Saver(variables_to_restore)
@@ -282,27 +256,6 @@ class SolverWrapper(object):
             last_snapshot_iter = 0
             rate = cfg.TRAIN.LEARNING_RATE
             stepsizes = list(cfg.TRAIN.STEPSIZE)
-
-        ###################### finetune from base network --> Original #######################
-        # # Initialize all variables first
-        # sess.run(tf.variables_initializer(variables, name='init'))
-        # var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
-        # # print("var_keep_dic", var_keep_dic)
-        # # Get the variables to restore, ignoring the variables to fix
-        # variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
-        # # print("variables_to_restore:", variables_to_restore)
-        #
-        # restorer = tf.train.Saver(variables_to_restore)
-        # restorer.restore(sess, self.pretrained_model)
-        # print('Loaded.')
-        # # Need to fix the variables before loading, so that the RGB weights are changed to BGR
-        # # For VGG16 it also changes the convolutional weights fc6 and fc7 to
-        # # fully connected weights
-        # self.net.fix_variables(sess, self.pretrained_model)
-        # print('Fixed.')
-        # last_snapshot_iter = 0
-        # rate = cfg.TRAIN.LEARNING_RATE
-        # stepsizes = list(cfg.TRAIN.STEPSIZE)
 
         return rate, last_snapshot_iter, stepsizes, np_paths, ss_paths
 
@@ -357,7 +310,6 @@ class SolverWrapper(object):
 
         # Find previous snapshots if there is any to restore from
         lsf, nfiles, sfiles = self.find_previous()
-        # print("**************:", lsf, nfiles, sfiles)   0 [] []
 
         # Initialize the variables or restore them from the last snapshot
         if lsf == 0:
@@ -451,12 +403,10 @@ class SolverWrapper(object):
         self.data_layer_val = RoIDataLayer(self.valroidb, self.imdb.num_classes, random=True)
 
         # Construct the computation graph
-        # lr, train_op = self.construct_graph(sess)
         lr, train_op, train_m1_op, train_m2_op, train_m3_op, _ = self.construct_graph(sess)
 
         # Find previous snapshots if there is any to restore from
         lsf, nfiles, sfiles = self.find_previous()
-        # print("**************:", lsf, nfiles, sfiles)   0 [] []
 
         # Initialize the variables or restore them from the last snapshot
         if lsf == 0:
