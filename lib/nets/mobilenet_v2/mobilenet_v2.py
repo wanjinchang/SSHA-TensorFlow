@@ -32,7 +32,7 @@ from nets.mobilenet_v2 import conv_blocks as ops
 # from lib.nets.mobilenet import mobilenet as mobile_lib
 import nets.mobilenet_v2.mobilenet as mobile_lib
 
-from nets.network import Network
+from nets.network_kpoints import Network
 from model.config import cfg
 
 slim = tf.contrib.slim
