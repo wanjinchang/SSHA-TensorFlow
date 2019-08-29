@@ -241,7 +241,7 @@ class Network(object):
         # net_conv = self._image_to_head(is_training)
         timer = Timer()
         timer.tic()
-        self._image_to_head(is_training=False)
+        self._image_to_head(is_training)
         timer.toc()
         print('base_network took {:.3f}s'.format(timer.total_time))
         with tf.variable_scope(self._scope, self._scope):
