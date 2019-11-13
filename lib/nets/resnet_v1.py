@@ -1,5 +1,5 @@
 # --------------------------------------------------------
-# Tensorflow Faster R-CNN
+# Tensorflow SSHA
 # Licensed under The MIT License [see LICENSE for details]
 # Modified from Xinlei Chen by Jinchang Wan
 # --------------------------------------------------------
@@ -16,7 +16,7 @@ from tensorflow.contrib.slim.python.slim.nets import resnet_v1
 from tensorflow.contrib.slim.python.slim.nets.resnet_v1 import resnet_v1_block
 import numpy as np
 
-from nets.network import Network
+from nets.network_kpoints import Network
 from model.config import cfg
 
 
