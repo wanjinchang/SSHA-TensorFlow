@@ -129,6 +129,21 @@ def im_detect(sess, net, im):
 
     return scores, pred_boxes
 
+def im_detect_bbox_kpoints(sess, net, im):
+    blobs, im_scales = _get_blobs(im)  # take about 20ms
+    assert len(im_scales) == 1, "Only single-image batch implemented"
+
+    im_blob = blobs['data']
+    blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
+
+    scores, rois, kpoints = net.test_image(sess, blobs['data'], blobs['im_info'])
+
+    boxes = rois[:, 1:5] / im_scales[0]
+    scores = np.reshape(scores, [scores.shape[0], -1])
+    kpoints = kpoints / im_scales[0]
+    pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    return scores, pred_boxes, kpoints
 
 def apply_nms(all_boxes, thresh):
     """Apply non-maximum suppression to all predicted boxes output by the
