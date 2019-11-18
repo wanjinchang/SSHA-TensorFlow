@@ -1,5 +1,5 @@
 # --------------------------------------------------------
-# SSH
+# Fast R-CNN
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick and Xinlei Chen
@@ -106,18 +106,53 @@ class imdb(object):
         return [PIL.Image.open(self.image_path_at(i)).size[0]
                 for i in range(self.num_images)]
 
+    def _get_size(self):
+        return [PIL.Image.open(self.image_path_at(i)).size
+                for i in range(self.num_images)]
+
     def append_flipped_images(self):
         num_images = self.num_images
         widths = self._get_widths()
+        # sizes = self._get_size()
         for i in range(num_images):
             boxes = self.roidb[i]['boxes'].copy()
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
+            # print("!!!!!!!!:", oldx1, oldx2)
 
             boxes[:, 0] = widths[i] - oldx2 + 1
             boxes[:, 2] = widths[i] - oldx1 + 1
             assert (boxes[:, 2] >= boxes[:, 0]).all()
+
+            # flip landmarks if do not has
+            points = self.roidb[i]['points'].copy()
+            ind = np.where(points[:, 10] == 1)[0]
+            if len(ind) != 0:
+                eye1x = points[ind, 0].copy()
+                eye1y = points[ind, 1].copy()
+                eye2x = points[ind, 2].copy()
+                eye2y = points[ind, 3].copy()
+                bix = points[ind, 4].copy()
+                biy = points[ind, 5].copy()
+                zou1x = points[ind, 6].copy()
+                zou1y = points[ind, 7].copy()
+                zou2x = points[ind, 8].copy()
+                zou2y = points[ind, 9].copy()
+                gt_points_flag = points[ind, 10].copy()
+                points[ind, 0] = widths[i] - eye2x - 1
+                points[ind, 1] = eye2y
+                points[ind, 2] = widths[i] - eye1x - 1
+                points[ind, 3] = eye1y
+                points[ind, 4] = widths[i] - bix - 1
+                points[ind, 5] = biy
+                points[ind, 6] = widths[i] - zou2x - 1
+                points[ind, 7] = zou2y
+                points[ind, 8] = widths[i] - zou1x - 1
+                points[ind, 9] = zou1y
+                points[ind, 10] = gt_points_flag
+
             entry = {'boxes': boxes,
+                     'points': points,
                      'gt_overlaps': self.roidb[i]['gt_overlaps'],
                      'gt_classes': self.roidb[i]['gt_classes'],
                      'flipped': True}
