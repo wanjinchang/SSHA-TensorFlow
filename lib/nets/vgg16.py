@@ -13,8 +13,8 @@ from tensorflow.contrib.slim import losses
 from tensorflow.contrib.slim import arg_scope
 import numpy as np
 
-from nets.network import Network
-from model.config import cfg
+from lib.nets.network_kpoints import Network
+from lib.model.config import cfg
 
 
 class vgg16_ssh(Network):

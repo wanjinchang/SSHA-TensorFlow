@@ -21,11 +21,11 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.training import saver as saver_lib
 
-from nets.vgg16 import vgg16_ssh
-from nets.resnet_v1 import resnetv1_ssh
-from nets.mobilenet_v1 import mobilenetv1_ssh
-from nets.darknet53 import Darknet53_ssh
-from nets.mobilenet_v2.mobilenet_v2 import mobilenetv2_ssh
+from lib.nets.vgg16 import vgg16_ssh
+from lib.nets.resnet_v1 import resnetv1_ssh
+from lib.nets.mobilenet_v1 import mobilenetv1_ssh
+from lib.nets.darknet53 import Darknet53_ssh
+from lib.nets.mobilenet_v2.mobilenet_v2 import mobilenetv2_ssh
 
 import tensorflow as tf
 
@@ -89,35 +89,6 @@ def freeze_graph_with_def_protos(
                 input_graph_def,
                 output_node_names.split(','),
                 variable_names_blacklist=variable_names_blacklist)
-            # if input_saver_def:
-            #     print('>>>>>input_saver_def', input_saver_def)
-            #     saver = saver_lib.Saver(saver_def=input_saver_def)
-            #     saver.restore(sess, input_checkpoint)
-            # else:
-            #     var_list = {}
-            #     reader = pywrap_tensorflow.NewCheckpointReader(input_checkpoint)
-            #     var_to_shape_map = reader.get_variable_to_shape_map()
-            #     for key in var_to_shape_map:
-            #         try:
-            #             tensor = sess.graph.get_tensor_by_name(key + ':0')
-            #         except KeyError:
-            #             # This tensor doesn't exist in the graph (for example it's
-            #             # 'global_step' or a similar housekeeping element) so skip it.
-            #             continue
-            #         var_list[key] = tensor
-            #     saver = saver_lib.Saver(var_list=var_list)
-            #     saver.restore(sess, input_checkpoint)
-            #     if initializer_nodes:
-            #         sess.run(initializer_nodes)
-            #
-            # variable_names_blacklist = (variable_names_blacklist.split(',') if
-            #                             variable_names_blacklist else None)
-            # output_graph_def = graph_util.convert_variables_to_constants(
-            #     sess,
-            #     input_graph_def,
-            #     output_node_names.split(','),
-            #     variable_names_blacklist=variable_names_blacklist)
-
     return output_graph_def
 
 
@@ -155,22 +126,6 @@ input_placeholder_fn_map = {
     'image_tensor': _image_tensor_input_placeholder,
 }
 
-# def _add_output_tensor_nodes(preprocess_scores, preprocess_rois, output_collection_name='inferece_op'):
-#     """
-#     Adds output nodes for detection boxes and scores.
-#     :param preprocess_scores: a dictionary containing the all detection scores concat by
-#         the network inference output;
-#     :param preprocess_rois: a dictionary containing the all detection rois concat by
-#         the network inference output;
-#     :param output_collection_name: Name of collection to add output tensors to.
-#     :return: A tensor dict containing the added output tensor nodes.
-#     """
-#     outputs = {}
-#     outputs['all_scores'] = tf.identity(preprocess_scores, name='all_scores')
-#     outputs['all_rois'] = tf.identity(preprocess_rois, name='all_rois')
-#     for output_key in outputs.keys():
-#         tf.add_to_collection(output_collection_name, outputs[output_key])
-#     return outputs
 def _add_output_tensor_nodes(net, preprocess_tensors, output_collection_name='inferece_op'):
     """
     Adds output nodes for all preprocess_tensors.
@@ -181,6 +136,7 @@ def _add_output_tensor_nodes(net, preprocess_tensors, output_collection_name='in
     outputs = {}
     outputs['roi_scores'] = tf.identity(net.all_rois_scores, name='rois_scores')
     outputs['rois']  = tf.identity(net.all_rois, name='rois')
+    outputs['kpoints'] = tf.identity(net.all_kpoints, name='kpoints')
     for output_key in outputs.keys():
         tf.add_to_collection(output_collection_name, outputs[output_key])
     return outputs
@@ -265,36 +221,10 @@ def _get_outputs_from_inputs(input_tensors, detection_model,
     return _add_output_tensor_nodes(postprocessed_tensors,
                                     output_collection_name)
 
-
-# def _build_detection_graph(input_type, detection_model, input_shape,
-#                            output_collection_name, graph_hook_fn):
-#     """Build the detection graph."""
-#     if input_type not in input_placeholder_fn_map:
-#         raise ValueError('Unknown input type: {}'.format(input_type))
-#     placeholder_args = {}
-#     if input_shape is not None:
-#         if input_type != 'image_tensor':
-#             raise ValueError('Can only specify input shape for `image_tensor` '
-#                              'inputs.')
-#         placeholder_args['input_shape'] = input_shape
-#     placeholder_tensor, input_tensors = input_placeholder_fn_map[input_type](
-#         **placeholder_args)
-#     outputs = _get_outputs_from_inputs(
-#         input_tensors=input_tensors,
-#         detection_model=detection_model,
-#         output_collection_name=output_collection_name)
-#
-#     # Add global step to the graph.
-#     slim.get_or_create_global_step()
-#
-#     if graph_hook_fn: graph_hook_fn()
-#
-#     return outputs, placeholder_tensor
-
 def _build_detection_graph(output_collection_name, graph_hook_fn):
     """Build the detection graph."""
-    net = mobilenetv1_ssh()
-    # net = vgg16_ssh()
+    # net = mobilenetv1_ssh()
+    net = vgg16_ssh()
     net.create_architecture("TEST", 2,
                             tag='default', anchor_scales={"M1": [1, 2], "M2": [4, 8], "M3": [16, 32]})
     placeholder_tensor = net._image
@@ -302,8 +232,6 @@ def _build_detection_graph(output_collection_name, graph_hook_fn):
 
     outputs = _add_output_tensor_nodes(net, outputs, output_collection_name)
 
-    # Add global step to the graph.
-    # slim.get_or_create_global_step()
 
     if graph_hook_fn: graph_hook_fn()
 
@@ -318,9 +246,9 @@ def _export_inference_graph(trained_checkpoint_prefix,
     """Export helper."""
     tf.gfile.MakeDirs(output_directory)
     frozen_graph_path = os.path.join(output_directory,
-                                     'mobilev1_ssh_group_training.pb')
+                                     'vgg16_ssha_group_training.pb')
     saved_model_path = os.path.join(output_directory, 'saved_model')
-    model_path = os.path.join(output_directory, 'mobile_ssh_iter_320000.ckpt')
+    model_path = os.path.join(output_directory, 'vgg16_ssh_iter_460000.ckpt')
 
     outputs, placeholder_tensor = _build_detection_graph(
         output_collection_name=output_collection_name,
@@ -335,18 +263,10 @@ def _export_inference_graph(trained_checkpoint_prefix,
     saver = tf.train.Saver(**saver_kwargs)
     input_saver_def = saver.as_saver_def()
 
-    # tf.import_graph_def(tf.get_default_graph().as_graph_def(), name='')
-
-    # write_graph_and_checkpoint(
-    #     inference_graph_def=tf.get_default_graph().as_graph_def(),
-    #     model_path=model_path,
-    #     input_saver_def=input_saver_def,
-    #     trained_checkpoint_prefix=checkpoint_to_use)
-
     if write_inference_graph:
         inference_graph_def = tf.get_default_graph().as_graph_def()
         inference_graph_path = os.path.join(output_directory,
-                                            'mobilev1_ssh_group_training.pbtxt')
+                                            'vgg16_ssha_group_training.pbtxt')
         for node in inference_graph_def.node:
             node.device = ''
         with gfile.GFile(inference_graph_path, 'wb') as f:
@@ -372,7 +292,7 @@ def _export_inference_graph(trained_checkpoint_prefix,
 
 def export_inference_graph(trained_checkpoint_prefix,
                            output_directory,
-                           output_collection_name='mobilev1_ssh_group_training',
+                           output_collection_name='vgg16_ssha_group_training',
                            additional_output_tensor_names=None,
                            write_inference_graph=False):
     """Exports inference graph for the model specified in the pipeline config.
@@ -400,7 +320,7 @@ def export_inference_graph(trained_checkpoint_prefix,
 
 if __name__ == '__main__':
     # ckpt_path = '/home/oeasy/PycharmProjects/SSH-TensorFlow/output/mobile/wider_face_train/default/mobile_ssh_iter_400000.ckpt'
-    ckpt_path = '/home/oeasy/PycharmProjects/tf-ssh_modify/output/pb/mobile/default_group_training/mobile_ssh_iter_320000.ckpt'
-    output_dir = '/home/oeasy/PycharmProjects/tf-ssh_modify/output/pb/mobile/default_group_training'
+    ckpt_path = '/home/oeasy/PycharmProjects/tf-ssh_modify/output/vgg16/wider_face_train/default_bbx_kp_0802_modify_loss/vgg16_ssh_iter_460000.ckpt'
+    output_dir = '/home/oeasy/PycharmProjects/tf-ssh_modify/output/pb/vgg16/default_bbox_kpoints'
     export_inference_graph(trained_checkpoint_prefix=ckpt_path, output_directory=output_dir)
 

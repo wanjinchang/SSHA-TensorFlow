@@ -117,8 +117,6 @@ class Network(object):
 
             tf.reshape(rois, [-1, 5])
             tf.reshape(rpn_scores, [-1, 1])
-            # # rois.set_shape([-1, 5])
-            # # rpn_scores.set_shape([-1, 1])
         return rois, rpn_scores
 
     def _proposal_layer(self, rpn_cls_prob, rpn_bbox_pred, kpoints_pred, target_name, name):
@@ -179,11 +177,11 @@ class Network(object):
     def _anchor_target_layer(self, rpn_cls_prob, scope_name, target_name):
         with tf.variable_scope(scope_name + target_name) as scope:
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights, \
-            kpoints_targets, rpn_kpoints_inside_weights, rpn_kpoints_outside_weights = tf.py_func(
+            kpoints_targets, rpn_kpoints_weights = tf.py_func(
                 anchor_target_layer,
                 [rpn_cls_prob, self._gt_boxes, self.gt_kpoints, self._im_info, self._feat_stride[target_name],
                  self._anchors, self._num_anchors[target_name], target_name],
-                [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32],
+                [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32],
                 name="anchor_target")
 
             rpn_labels.set_shape([1, 1, None, None])
@@ -191,8 +189,7 @@ class Network(object):
             rpn_bbox_inside_weights.set_shape([1, None, None, self._num_anchors[target_name] * 4])
             rpn_bbox_outside_weights.set_shape([1, None, None, self._num_anchors[target_name] * 4])
             kpoints_targets.set_shape([1, None, None, self._num_anchors[target_name] * 10])
-            rpn_kpoints_inside_weights.set_shape([1, None, None, self._num_anchors[target_name] * 10])
-            rpn_kpoints_outside_weights.set_shape([1, None, None, self._num_anchors[target_name] * 10])
+            rpn_kpoints_weights.set_shape([1, None, None, self._num_anchors[target_name] * 10])
 
             rpn_labels = tf.to_int32(rpn_labels, name="to_int32")
 
@@ -202,8 +199,7 @@ class Network(object):
             rpn_params['rpn_bbox_inside_weights'] = rpn_bbox_inside_weights
             rpn_params['rpn_bbox_outside_weights'] = rpn_bbox_outside_weights
             rpn_params['kpoints_targets'] = kpoints_targets
-            rpn_params['rpn_kpoints_inside_weights'] = rpn_kpoints_inside_weights
-            rpn_params['rpn_kpoints_outside_weights'] = rpn_kpoints_outside_weights
+            rpn_params['rpn_kpoints_weights'] = rpn_kpoints_weights
             self._anchor_targets[target_name] = rpn_params
 
         return rpn_labels
@@ -238,7 +234,6 @@ class Network(object):
             initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
 
         # self._image_to_head --> vgg conv5_3
-        # net_conv = self._image_to_head(is_training)
         timer = Timer()
         timer.tic()
         self._image_to_head(is_training)
@@ -253,9 +248,14 @@ class Network(object):
                                          self._predictions["M3"]["rois_scores"]], axis=0, name='roi_scores')
             self.all_rois = tf.concat([self._predictions["M1"]["rois"], self._predictions["M2"]["rois"], self._predictions["M3"]["rois"]],
                                   axis=0, name='rois')
+            self.all_kpoints = tf.concat([self._predictions["M1"]["kpoints"], self._predictions["M2"]["kpoints"],
+                                          self._predictions["M3"]["kpoints"]],
+                                         axis=0, name='kpoints')
         else:
             self.all_rois_scores = tf.concat([self._predictions["M2"]["rois_scores"], self._predictions["M3"]["rois_scores"]], axis=0, name='roi_scores')
             self.all_rois = tf.concat([self._predictions["M2"]["rois"], self._predictions["M3"]["rois"]], axis=0, name='rois')
+            self.all_kpoints = tf.concat([self._predictions["M2"]["kpoints"], self._predictions["M3"]["kpoints"]],
+                                         axis=0, name='kpoints')
 
         self._all_preds['all_predictions'] = self._predictions
         self._all_anchor_targets['all_anchors'] = self._anchor_targets
@@ -276,6 +276,20 @@ class Network(object):
             axis=dim
         ))
         return loss_box
+
+    def _localization_loss(self, kpoints_pred, kpoints_targets, weights, sigma=1.0, dim=[1]):
+        sigma_2 = sigma ** 2
+        kpoints_diff = kpoints_pred - kpoints_targets
+        abs_in_kpoints_diff = tf.abs(kpoints_diff)
+        smoothL1_sign = tf.stop_gradient(tf.to_float(tf.less(abs_in_kpoints_diff, 1. / sigma_2)))
+        in_loss_kpoints = tf.pow(kpoints_diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
+                      + (abs_in_kpoints_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
+        out_loss_box = weights * in_loss_kpoints
+        loss_kpoints = tf.reduce_mean(tf.reduce_sum(
+            out_loss_box,
+            axis=dim
+        ))
+        return loss_kpoints
 
     def _compute_losses(self):
         self._losses['total_loss'] = 0
@@ -309,20 +323,9 @@ class Network(object):
             # RPN, landmarks loss
             kpoints_pred = self._predictions[name]['kpoints_pred']
             kpoints_targets = self._anchor_targets[name]['kpoints_targets']
-            rpn_kpoints_inside_weights = self._anchor_targets[name]['rpn_kpoints_inside_weights']
-            rpn_kpoints_outside_weights = self._anchor_targets[name]['rpn_kpoints_outside_weights']
-            rpn_loss_kpoints = self._smooth_l1_loss(kpoints_pred, kpoints_targets, rpn_kpoints_inside_weights,
-                                                    rpn_kpoints_outside_weights, sigma=sigma_rpn, dim=[1, 2, 3])
-            # pred = tf.equal(self.landmarks_flag, 1)
-            # landmarks_pred = tf.reshape(self._predictions[name]['landmarks_pred'], [-1, 10])
-            # print('>>>>>landmarks_pred', landmarks_pred)
-            # loss_fn = tf.reduce_mean(tf.reduce_sum(tf.square(self.landmarks - landmarks_pred), axis=1))
-            # square_loss = tf.square(landmarks_targets - landmarks_pred) * rpn_landmarks_inside_weights
-            # loss_fn = tf.reduce_mean(tf.reduce_sum(square_loss, axis=[1, 2, 3]))
-            # landmarks_loss = tf.cond(pred, lambda: loss_fn, lambda: tf.zeros_like(loss_fn, dtype=tf.float32))
-            # landmarks_loss = tf.reduce_mean(landmarks_loss)
-            # square_loss = tf.square(kpoints_targets - kpoints_pred) * rpn_kpoints_inside_weights
-            # rpn_loss_kpoints = tf.reduce_mean(tf.reduce_sum(square_loss, axis=[1, 2, 3]))
+
+            rpn_kpoints_weights = self._anchor_targets[name]['rpn_kpoints_weights']
+            rpn_loss_kpoints = self._localization_loss(kpoints_pred, kpoints_targets, rpn_kpoints_weights, sigma=sigma_rpn,  dim=[1,2,3])
 
             loss_items = {}
             loss_items['rpn_cross_entropy'] = rpn_cross_entropy
@@ -335,9 +338,7 @@ class Network(object):
             loss_regu = loss + regularization_loss
             loss_items['total_loss'] = loss_regu
             self._losses[name] = loss_items
-            # self._losses['total_loss'] = loss + regularization_loss
 
-            # self._event_summaries.update(self._losses)
         return loss_regu
 
     def context_module(self, inputs, out_channels):
@@ -370,7 +371,6 @@ class Network(object):
             print('contained large faces branch M3!!!!!!')
             end_point = 'M3'
             with tf.variable_scope(end_point):
-                # net = slim.max_pool2d(self.end_points["conv5_3"], [2, 2], scope='pool1')
                 feat_layer = self._feat_layers[end_point]
                 if self._scope == 'MobilenetV2':
                     net = self.end_points[feat_layer]
@@ -380,25 +380,26 @@ class Network(object):
                 end_points[end_point] = net
 
         if 'M2' in self._feat_branches:
-            print('contained medium faces branch M2!!!!!!')
             end_point = "M2"
             with tf.variable_scope(end_point):
                 feat_layer = self._feat_layers[end_point]
                 net = self.DetectionModule(self.end_points[feat_layer], self._Module_boxes[end_point])
+                # print("M2:", net.shape)
                 end_points[end_point] = net
 
         # the Module M1 of ssh is based on vgg conv4_3 features
         if 'M1' in self._feat_branches:
-            print('contained small faces branch M1!!!!!!')
             end_point = "M1"
             with tf.variable_scope(end_point):
                 feat_layers = self._feat_layers[end_point]
                 M1_dimReduction_1 = slim.conv2d(self.end_points[feat_layers[0]], 128, [1, 1], scope="conv1_1", padding='VALID')
                 M1_dimReduction_2 = slim.conv2d(self.end_points[feat_layers[1]], 128, [1, 1], scope="conv1_2", padding='VALID')
+                # print("######:", M1_dimReduction_2.shape)   -->(1, ?, ?, 128)
                 M1_dimReduction_2 = tf.image.resize_bilinear(M1_dimReduction_2, tf.shape(M1_dimReduction_1)[1:3])
                 M1_elementWiseSum = tf.add(M1_dimReduction_1, M1_dimReduction_2)
                 net = slim.conv2d(M1_elementWiseSum, 128, [3, 3], scope="conv2")
                 net = self.DetectionModule(net, self._Module_boxes[end_point])
+                # net = self.DetectionModule(net, 128)
                 end_points[end_point] = net
 
         # for k, v in self._Module_boxes.items():
@@ -419,7 +420,6 @@ class Network(object):
                 self._predictions[k] = pred
         return end_points
 
-    # def _region_proposal(self, net_conv, name, is_training, initializer):
     def _region_proposal(self, net_conv, name, is_training):
         rpn_cls_score = slim.conv2d(net_conv, self._num_anchors[name] * 2, [1, 1], trainable=is_training,
                                     padding='VALID', activation_fn=None, scope=name + '_rpn_cls_score')
@@ -487,12 +487,6 @@ class Network(object):
         # self.landmarks_flag = tf.constant(landmarks_flag, dtype=tf.int32)
         self._num_classes = num_classes
         self._mode = mode
-
-        # self._anchor_scales = anchor_scales
-        # self._num_scales = len(self._anchor_scales["M1"])
-        # self._anchor_ratios = anchor_ratios
-        # self._num_ratios = len(self._anchor_ratios)
-        # self._num_anchors = self._num_scales * self._num_ratios
 
         # get the anchor numbers corresponding to the three branches
         self._anchor_scales = anchor_scales
@@ -585,6 +579,11 @@ class Network(object):
     # only useful during testing mode
     def test_image(self, sess, image, im_info):
         feed_dict = {self._image: image, self._im_info: im_info}
+        # cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["cls_score"],
+        #                                                  self._predictions['cls_prob'],
+        #                                                  self._predictions['bbox_pred'],
+        #                                                  self._predictions['rois']],
+        #                                                 feed_dict=feed_dict)
         timer = Timer()
         timer.tic()
         predictions = sess.run(self._predictions, feed_dict=feed_dict)
@@ -598,24 +597,17 @@ class Network(object):
             rois = np.concatenate((predictions["M1"]["rois"], predictions["M2"]["rois"], predictions["M3"]["rois"]), axis=0)
             kpoints = np.concatenate((predictions["M1"]["kpoints"], predictions["M2"]["kpoints"], predictions["M3"]["kpoints"]), axis=0)
 
+
         # discard M1 branch, only keep M2 and M3 branches to detect medium and large faces
         else:
             print('do not contain M1 branch!!!!')
             cls_prob = np.concatenate((predictions["M2"]["rois_scores"], predictions["M3"]["rois_scores"]), axis=0)
             rois = np.concatenate((predictions["M2"]["rois"], predictions["M3"]["rois"]), axis=0)
             kpoints = np.concatenate((predictions["M2"]["kpoints"], predictions["M3"]["kpoints"]), axis=0)
-            # cls_prob = predictions["M2"]["rois_scores"]
-            # rois = predictions["M2"]["rois"]
         return cls_prob, rois, kpoints
 
     def test_image_without_gen_anchors(self, sess, image, im_info):
         feed_dict = {self._image: image, self._im_info: im_info}
-        # cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["cls_score"],
-        #                                                  self._predictions['cls_prob'],
-        #                                                  self._predictions['bbox_pred'],
-        #                                                  self._predictions['rois']],
-        #                                                 feed_dict=feed_dict)
-        print('>>>>>>im_info', im_info)
         timer = Timer()
         timer.tic()
         predictions = sess.run(self._predictions, feed_dict=feed_dict)
@@ -647,16 +639,12 @@ class Network(object):
         if 'M1' in self._feat_branches:
             cls_prob = np.concatenate((rois_scores['M1'], rois_scores['M2'], rois_scores['M3']), axis=0)
             rois = np.concatenate((rois['M1'], rois['M2'], rois['M3']), axis=0)
-            # cls_prob = predictions["M1"]["rois_scores"]
-            # rois = predictions["M1"]["rois"]
 
         # discard M1 branch, only keep M2 and M3 branches to detect medium and large faces
         else:
             print('do not contain M1 branch!!!!')
             cls_prob = np.concatenate((rois_scores['M2'], rois_scores['M3']), axis=0)
             rois = np.concatenate((rois['M2'], rois['M3']), axis=0)
-            # cls_prob = predictions["M2"]["rois_scores"]
-            # rois = predictions["M2"]["rois"]
         return cls_prob, rois
 
     def get_summary(self, sess, blobs):

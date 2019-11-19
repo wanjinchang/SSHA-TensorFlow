@@ -161,12 +161,12 @@ def anchor_target_layer(rpn_cls_prob, gt_boxes, gt_points, im_info, _feat_stride
     # only the positive ones have regression targets
     bbox_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)
 
-    kpoints_inside_weights = np.zeros((len(inds_inside), 10), dtype=np.float32)
     # only the positive ones have regression targets
-    kpoints_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_KPOINTS_POSITIVE_WEIGHTS)
+    kpoints_weights = np.zeros((len(inds_inside), 10), dtype=np.float32)
+    kpoints_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_KPOINTS_POSITIVE_WEIGHTS)
+
 
     bbox_outside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
-    kpoints_outside_weights = np.zeros((len(inds_inside), 10), dtype=np.float32)
     if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:
         # uniform weighting of examples (given non-uniform sampling)
         num_examples = np.sum(labels >= 0)
@@ -184,12 +184,11 @@ def anchor_target_layer(rpn_cls_prob, gt_boxes, gt_points, im_info, _feat_stride
                             np.sum(labels == 1))
     bbox_outside_weights[labels == 1, :] = positive_weights
     bbox_outside_weights[labels == 0, :] = negative_weights
-    kpoints_outside_weights[labels == 1, :] = kpoints_positive_weights
+    kpoints_weights[labels == 1, :] = kpoints_positive_weights
     if gt_points.size > 0:
         gt_points_flag = gt_points[argmax_overlaps, 10]
         gt_points_flag = np.array(gt_points_flag, np.int32)
-        kpoints_inside_weights[gt_points_flag == 0, :] = np.array(cfg.TRAIN.RPN_KPOINTS_WEIGHTS_NON)
-        kpoints_outside_weights[gt_points_flag == 0, :] = np.array(cfg.TRAIN.RPN_KPOINTS_WEIGHTS_NON)
+        kpoints_weights[gt_points_flag == 0, :] = np.array(cfg.TRAIN.RPN_KPOINTS_WEIGHTS_NON)
 
     # map up to original set of anchors
     labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
@@ -197,8 +196,7 @@ def anchor_target_layer(rpn_cls_prob, gt_boxes, gt_points, im_info, _feat_stride
     kpoints_targets = _unmap(kpoints_targets, total_anchors, inds_inside, fill=0)
     bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0)
     bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
-    kpoints_inside_weights = _unmap(kpoints_inside_weights, total_anchors, inds_inside, fill=0)
-    kpoints_outside_weights = _unmap(kpoints_outside_weights, total_anchors, inds_inside, fill=0)
+    kpoints_weights = _unmap(kpoints_weights, total_anchors, inds_inside, fill=0)
 
     # labels
     labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
@@ -225,15 +223,10 @@ def anchor_target_layer(rpn_cls_prob, gt_boxes, gt_points, im_info, _feat_stride
 
     rpn_bbox_outside_weights = bbox_outside_weights
 
-    # kpoints_inside_weights
-    kpoints_inside_weights = kpoints_inside_weights.reshape((1, height, width, A * 10))
-    rpn_kpoints_inside_weights = kpoints_inside_weights
-
-    # kpoints_outside_weights
-    kpoints_outside_weights = kpoints_outside_weights.reshape((1, height, width, A * 10))
-    rpn_kpoints_outside_weights = kpoints_outside_weights
+    kpoints_weights = kpoints_weights.reshape((1, height, width, A * 10))
+    rpn_kpoints_weights = kpoints_weights
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights, kpoints_targets, \
-           rpn_kpoints_inside_weights, rpn_kpoints_outside_weights
+           rpn_kpoints_weights
 
 
 def _unmap(data, count, inds, fill=0):
